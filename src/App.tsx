@@ -140,7 +140,7 @@ function App() {
   }
 
   return (
-    <AuthWrapper>
+    <AuthWrapper showHeader={false}>
       <RoleBasedAccess
         clientView={(clientData: Client) => (
           <ClientDashboard clientData={clientData} />

@@ -7,9 +7,10 @@ import { LogOut, User as UserIcon } from 'lucide-react';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
+  showHeader?: boolean;
 }
 
-export function AuthWrapper({ children }: AuthWrapperProps) {
+export function AuthWrapper({ children, showHeader = true }: AuthWrapperProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -68,31 +69,37 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-semibold text-gray-900">
-              Sesamo
-            </h1>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <UserIcon className="w-4 h-4" />
-                <span>{user.email}</span>
+      {showHeader && (
+        <header className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <h1 className="text-xl font-semibold text-gray-900">
+                Sesamo
+              </h1>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <UserIcon className="w-4 h-4" />
+                  <span>{user.email}</span>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </button>
               </div>
-              <button
-                onClick={handleSignOut}
-                className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
-              </button>
             </div>
           </div>
-        </div>
-      </header>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
+        </header>
+      )}
+      {showHeader ? (
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {children}
+        </main>
+      ) : (
+        <>{children}</>
+      )}
     </div>
   );
 }
