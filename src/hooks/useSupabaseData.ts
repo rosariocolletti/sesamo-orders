@@ -383,11 +383,11 @@ export function useSupabaseData() {
   const mergeOrders = async (orderIds: string[], newDeliveryDate: string) => {
     try {
       const ordersToMerge = orders.filter(order => orderIds.includes(order.id));
-      
+
       if (ordersToMerge.length < 2) return;
-      
+
       const clientId = ordersToMerge[0].clientId;
-      
+
       // Combine all items
       const combinedItems = ordersToMerge.reduce((allItems, order) => {
         order.items.forEach(orderItem => {
@@ -400,25 +400,33 @@ export function useSupabaseData() {
         });
         return allItems;
       }, [] as OrderItem[]);
-      
+
       const total = combinedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      
-      // Create merged order
+
+      // Create merged order with status 'shipped'
       const mergedOrderData = {
         clientId,
         items: combinedItems,
         deliveryDate: newDeliveryDate,
-        status: 'pending' as const,
+        status: 'shipped' as const,
         notes: `Merged from orders: ${orderIds.map(id => id.slice(-8)).join(', ')}`,
         total
       };
-      
+
       await addOrder(mergedOrderData);
-      
-      // Delete original orders
+
+      // Update original orders status to 'delivered' instead of deleting them
       for (const orderId of orderIds) {
-        await deleteOrder(orderId);
+        const { error } = await supabase
+          .from('orders')
+          .update({ status: 'delivered' })
+          .eq('id', orderId);
+
+        if (error) throw error;
       }
+
+      // Reload data to refresh the orders list
+      await loadAllData();
     } catch (err) {
       console.error('Error merging orders:', err);
       throw err;
