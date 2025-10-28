@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Client, Item, Order } from '../types';
 import { supabase } from '../lib/supabase';
-import { Plus, Copy, ShoppingCart, Calendar, Package, LogOut, User as UserIcon, Building2, Phone, Mail, Edit2, List } from 'lucide-react';
+import { Plus, Copy, ShoppingCart, Calendar, Package, LogOut, User as UserIcon, Building2, Phone, Mail, Edit2, List, BookOpen } from 'lucide-react';
 import ClientOrderForm, { ClientOrderFormData } from './ClientOrderForm';
 import { calculateDiscount } from '../utils/discountCalculator';
 
@@ -10,6 +10,7 @@ interface ClientDashboardProps {
 }
 
 type OrderSection = 'pending' | 'processing' | 'delivered';
+type ClientTab = 'orders' | 'catalog';
 
 export default function ClientDashboard({ clientData }: ClientDashboardProps) {
   const [items, setItems] = useState<Item[]>([]);
@@ -20,6 +21,7 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [initialFormData, setInitialFormData] = useState<ClientOrderFormData | undefined>();
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ClientTab>('orders');
 
   useEffect(() => {
     loadData();
@@ -401,23 +403,54 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
         </div>
 
         <div className="mb-8">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button
-              onClick={handleCreateOrder}
-              className="flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
-            >
-              <Plus size={20} />
-              Create New Order
-            </button>
-            <button
-              onClick={handleDuplicateLastOrder}
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
-            >
-              <Copy size={20} />
-              Duplicate Last Order
-            </button>
+          <div className="border-b border-gray-200">
+            <nav className="flex gap-8">
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`flex items-center gap-2 pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'orders'
+                    ? 'border-orange-600 text-orange-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <ShoppingCart size={20} />
+                Orders
+              </button>
+              <button
+                onClick={() => setActiveTab('catalog')}
+                className={`flex items-center gap-2 pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'catalog'
+                    ? 'border-orange-600 text-orange-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <BookOpen size={20} />
+                Catalog
+              </button>
+            </nav>
           </div>
         </div>
+
+        {activeTab === 'orders' && (
+          <>
+            <div className="mb-8">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={handleCreateOrder}
+                  className="flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+                >
+                  <Plus size={20} />
+                  Create New Order
+                </button>
+                <button
+                  onClick={handleDuplicateLastOrder}
+                  className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+                >
+                  <Copy size={20} />
+                  Duplicate Last Order
+                </button>
+              </div>
+            </div>
 
         <div className="space-y-8">
           <div>
@@ -480,6 +513,58 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
             )}
           </div>
         </div>
+          </>
+        )}
+
+        {activeTab === 'catalog' && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Product Catalog</h3>
+            {items.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No items available</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  The catalog is currently empty.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {items.map((item) => (
+                  <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                    {item.picture_url && (
+                      <div className="h-48 bg-gray-200 overflow-hidden">
+                        <img
+                          src={item.picture_url}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="p-4">
+                      <div className="mb-2">
+                        <h4 className="text-lg font-semibold text-gray-900">{item.name}</h4>
+                        <span className="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full mt-1">
+                          {item.category}
+                        </span>
+                      </div>
+                      {item.description && (
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                          {item.description}
+                        </p>
+                      )}
+                      <div className="flex justify-between items-center pt-3 border-t">
+                        <div>
+                          <p className="text-lg font-bold text-orange-600">{item.price.toFixed(2)} Kč</p>
+                          <p className="text-xs text-gray-500">{item.weight}kg</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {isModalOpen && (
