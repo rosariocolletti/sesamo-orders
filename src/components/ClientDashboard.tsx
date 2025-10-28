@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Client, Item, Order } from '../types';
 import { supabase } from '../lib/supabase';
-import { Plus, Copy, ShoppingCart, Calendar, Package, LogOut, User as UserIcon, Building2, Phone, Mail } from 'lucide-react';
+import { Plus, Copy, ShoppingCart, Calendar, Package, LogOut, User as UserIcon, Building2, Phone, Mail, Edit2, List } from 'lucide-react';
 import ClientOrderForm, { ClientOrderFormData } from './ClientOrderForm';
 import { calculateDiscount } from '../utils/discountCalculator';
 
@@ -9,12 +9,17 @@ interface ClientDashboardProps {
   clientData: Client;
 }
 
+type OrderSection = 'pending' | 'processing' | 'delivered';
+
 export default function ClientDashboard({ clientData }: ClientDashboardProps) {
   const [items, setItems] = useState<Item[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [processingOrders, setProcessingOrders] = useState<Order[]>([]);
+  const [deliveredOrders, setDeliveredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [initialFormData, setInitialFormData] = useState<ClientOrderFormData | undefined>();
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -42,7 +47,7 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
           )
         `)
         .eq('client_id', clientData.id)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'processing', 'delivered'])
         .order('created_at', { ascending: false });
 
       if (ordersError) throw ordersError;
@@ -74,7 +79,9 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
       })) || [];
 
       setItems(transformedItems);
-      setOrders(transformedOrders);
+      setPendingOrders(transformedOrders.filter(o => o.status === 'pending'));
+      setProcessingOrders(transformedOrders.filter(o => o.status === 'processing'));
+      setDeliveredOrders(transformedOrders.filter(o => o.status === 'delivered'));
     } catch (err) {
       console.error('Error loading data:', err);
     } finally {
@@ -118,10 +125,128 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
     }
   };
 
+  const handleEditOrder = (order: Order) => {
+    const formData: ClientOrderFormData = {
+      deliveryDate: order.deliveryDate,
+      notes: order.notes,
+      items: order.items.map(item => ({
+        itemId: item.itemId,
+        quantity: item.quantity
+      }))
+    };
+    setInitialFormData(formData);
+    setEditingOrderId(order.id);
+    setIsModalOpen(true);
+  };
+
+  const renderOrderCard = (order: Order, canEdit: boolean) => {
+    const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const discountInfo = calculateDiscount(subtotal);
+
+    const getStatusConfig = () => {
+      switch (order.status) {
+        case 'pending':
+          return { label: 'Pending', bg: 'bg-yellow-100', text: 'text-yellow-800' };
+        case 'processing':
+          return { label: 'Processing', bg: 'bg-blue-100', text: 'text-blue-800' };
+        case 'delivered':
+          return { label: 'Paid', bg: 'bg-green-100', text: 'text-green-800' };
+        default:
+          return { label: 'Unknown', bg: 'bg-gray-100', text: 'text-gray-800' };
+      }
+    };
+
+    const statusConfig = getStatusConfig();
+
+    return (
+      <div key={order.id} className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                <ShoppingCart className="text-orange-600" size={20} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Order #{order.id.slice(-8)}</h3>
+                <p className="text-sm text-gray-500">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}>
+                    {statusConfig.label}
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+          {canEdit && (
+            <button
+              onClick={() => handleEditOrder(order)}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+            >
+              <Edit2 size={16} />
+              Edit
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center gap-2 text-gray-600">
+            <Calendar size={16} />
+            <span>Delivery: {new Date(order.deliveryDate).toLocaleDateString()}</span>
+          </div>
+
+          <div className="flex items-center gap-2 text-gray-600">
+            <Package size={16} />
+            <span>{order.items.length} item(s)</span>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-3">
+            <div className="space-y-1">
+              {order.items.map((orderItem) => {
+                const item = items.find(i => i.id === orderItem.itemId);
+                return (
+                  <div key={orderItem.itemId} className="flex justify-between text-xs">
+                    <span className="truncate">{item?.name || 'Unknown Item'} × {orderItem.quantity}</span>
+                    <span>{(orderItem.price * orderItem.quantity).toFixed(2)} Kč</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="border-t pt-2 mt-2 space-y-1">
+              {discountInfo.discount > 0 ? (
+                <>
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>Subtotal:</span>
+                    <span>{discountInfo.subtotal.toFixed(2)} Kč</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-green-600">
+                    <span>Discount ({discountInfo.discountPercentage}%):</span>
+                    <span>-{discountInfo.discount.toFixed(2)} Kč</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-orange-600">
+                    <span>Total:</span>
+                    <span>{discountInfo.finalTotal.toFixed(2)} Kč</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between font-semibold">
+                  <span>Total:</span>
+                  <span>{order.total.toFixed(2)} Kč</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {order.notes && (
+            <div className="text-gray-600 text-xs">
+              <span className="font-medium">Notes:</span> {order.notes}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const handleSubmitOrder = async (formData: ClientOrderFormData) => {
     try {
-      const orderId = crypto.randomUUID();
-
       const orderItems = formData.items.map(item => {
         const itemData = items.find(i => i.id === item.itemId);
         return {
@@ -134,32 +259,67 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
       const subtotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       const discountInfo = calculateDiscount(subtotal);
 
-      const { error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          id: orderId,
-          client_id: clientData.id,
-          delivery_date: formData.deliveryDate,
-          status: 'pending',
-          notes: formData.notes || null,
-          total: discountInfo.finalTotal
-        }]);
-
-      if (orderError) throw orderError;
-
-      if (orderItems.length > 0) {
-        const orderItemsToInsert = orderItems.map(item => ({
-          order_id: orderId,
-          item_id: item.itemId,
-          quantity: item.quantity,
-          price: item.price
-        }));
-
-        const { error: itemsError } = await supabase
+      if (editingOrderId) {
+        await supabase
           .from('order_items')
-          .insert(orderItemsToInsert);
+          .delete()
+          .eq('order_id', editingOrderId);
 
-        if (itemsError) throw itemsError;
+        const { error: orderError } = await supabase
+          .from('orders')
+          .update({
+            delivery_date: formData.deliveryDate,
+            notes: formData.notes || null,
+            total: discountInfo.finalTotal
+          })
+          .eq('id', editingOrderId);
+
+        if (orderError) throw orderError;
+
+        if (orderItems.length > 0) {
+          const orderItemsToInsert = orderItems.map(item => ({
+            order_id: editingOrderId,
+            item_id: item.itemId,
+            quantity: item.quantity,
+            price: item.price
+          }));
+
+          const { error: itemsError } = await supabase
+            .from('order_items')
+            .insert(orderItemsToInsert);
+
+          if (itemsError) throw itemsError;
+        }
+      } else {
+        const orderId = crypto.randomUUID();
+
+        const { error: orderError } = await supabase
+          .from('orders')
+          .insert([{
+            id: orderId,
+            client_id: clientData.id,
+            delivery_date: formData.deliveryDate,
+            status: 'pending',
+            notes: formData.notes || null,
+            total: discountInfo.finalTotal
+          }]);
+
+        if (orderError) throw orderError;
+
+        if (orderItems.length > 0) {
+          const orderItemsToInsert = orderItems.map(item => ({
+            order_id: orderId,
+            item_id: item.itemId,
+            quantity: item.quantity,
+            price: item.price
+          }));
+
+          const { error: itemsError } = await supabase
+            .from('order_items')
+            .insert(orderItemsToInsert);
+
+          if (itemsError) throw itemsError;
+        }
       }
 
       await supabase
@@ -169,10 +329,11 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
 
       setIsModalOpen(false);
       setInitialFormData(undefined);
+      setEditingOrderId(null);
       loadData();
     } catch (err) {
-      console.error('Error creating order:', err);
-      alert('Failed to create order. Please try again.');
+      console.error('Error saving order:', err);
+      alert('Failed to save order. Please try again.');
     }
   };
 
@@ -258,101 +419,66 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
           </div>
         </div>
 
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Pending Orders</h3>
-          {orders.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-              <ShoppingCart className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No pending orders</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Create your first order to get started.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {orders.map((order) => {
-                const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                const discountInfo = calculateDiscount(subtotal);
+        <div className="space-y-8">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Edit2 size={20} className="text-yellow-600" />
+              Pending Orders
+            </h3>
+            {pendingOrders.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                <ShoppingCart className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No pending orders</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Create your first order to get started.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {pendingOrders.map((order) => renderOrderCard(order, true))}
+              </div>
+            )}
+          </div>
 
-                return (
-                  <div key={order.id} className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                            <ShoppingCart className="text-orange-600" size={20} />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">Order #{order.id.slice(-8)}</h3>
-                            <p className="text-sm text-gray-500">
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                Pending
-                              </span>
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Package size={20} className="text-blue-600" />
+              Orders of the Month
+            </h3>
+            {processingOrders.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                <Package className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No processing orders</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Orders being processed will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {processingOrders.map((order) => renderOrderCard(order, false))}
+              </div>
+            )}
+          </div>
 
-                    <div className="space-y-3 text-sm">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Calendar size={16} />
-                        <span>Delivery: {new Date(order.deliveryDate).toLocaleDateString()}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Package size={16} />
-                        <span>{order.items.length} item(s)</span>
-                      </div>
-
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <div className="space-y-1">
-                          {order.items.map((orderItem) => {
-                            const item = items.find(i => i.id === orderItem.itemId);
-                            return (
-                              <div key={orderItem.itemId} className="flex justify-between text-xs">
-                                <span className="truncate">{item?.name || 'Unknown Item'} × {orderItem.quantity}</span>
-                                <span>{(orderItem.price * orderItem.quantity).toFixed(2)} Kč</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div className="border-t pt-2 mt-2 space-y-1">
-                          {discountInfo.discount > 0 ? (
-                            <>
-                              <div className="flex justify-between text-xs text-gray-600">
-                                <span>Subtotal:</span>
-                                <span>{discountInfo.subtotal.toFixed(2)} Kč</span>
-                              </div>
-                              <div className="flex justify-between text-xs text-green-600">
-                                <span>Discount ({discountInfo.discountPercentage}%):</span>
-                                <span>-{discountInfo.discount.toFixed(2)} Kč</span>
-                              </div>
-                              <div className="flex justify-between font-semibold text-orange-600">
-                                <span>Total:</span>
-                                <span>{discountInfo.finalTotal.toFixed(2)} Kč</span>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="flex justify-between font-semibold">
-                              <span>Total:</span>
-                              <span>{order.total.toFixed(2)} Kč</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {order.notes && (
-                        <div className="text-gray-600 text-xs">
-                          <span className="font-medium">Notes:</span> {order.notes}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <List size={20} className="text-green-600" />
+              Paid Orders
+            </h3>
+            {deliveredOrders.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                <List className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No paid orders</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Completed orders will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {deliveredOrders.map((order) => renderOrderCard(order, false))}
+              </div>
+            )}
+          </div>
         </div>
       </main>
 
@@ -361,7 +487,7 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
-                {initialFormData ? 'Duplicate Order' : 'Create New Order'}
+                {editingOrderId ? 'Edit Order' : initialFormData ? 'Duplicate Order' : 'Create New Order'}
               </h3>
             </div>
             <div className="p-6">
@@ -372,6 +498,7 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
                 onCancel={() => {
                   setIsModalOpen(false);
                   setInitialFormData(undefined);
+                  setEditingOrderId(null);
                 }}
                 initialData={initialFormData}
               />
