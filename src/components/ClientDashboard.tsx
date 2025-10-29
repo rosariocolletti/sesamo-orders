@@ -84,7 +84,7 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
 
       setItems(transformedItems);
       setPendingOrders(transformedOrders.filter(o => o.status === 'pending'));
-      setConfirmedOrders(transformedOrders.filter(o => o.status === 'processing'));
+      setConfirmedOrders(transformedOrders.filter(o => o.status === 'confirmed'));
       setDeliveredOrders(transformedOrders.filter(o => o.status === 'delivered'));
     } catch (err) {
       console.error('Error loading data:', err);
