@@ -263,8 +263,8 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
       switch (order.status) {
         case 'pending':
           return { label: 'Pending', bg: 'bg-yellow-100', text: 'text-yellow-800' };
-        case 'processing':
-          return { label: 'Processing', bg: 'bg-blue-100', text: 'text-blue-800' };
+        case 'confirmed':
+          return { label: 'Confirmed', bg: 'bg-blue-100', text: 'text-blue-800' };
         case 'delivered':
           return { label: 'Paid', bg: 'bg-green-100', text: 'text-green-800' };
         default:
