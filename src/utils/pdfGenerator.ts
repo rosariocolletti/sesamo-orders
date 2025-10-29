@@ -73,7 +73,7 @@ export const generateOrderPDF = async (
   orderItems.forEach((item) => {
     const itemTotal = item.price * item.quantity;
     orderTotalDB += itemTotal;
-  }
+  });
   if (orderTotalDB < 600) {
     discount = 1;
   } else if (orderTotalDB < 1200) {
