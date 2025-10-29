@@ -75,7 +75,7 @@ export default function OrderManager({ orders, clients, items, onAddOrder, onUpd
       clientId: data.clientId,
       items: orderItems,
       deliveryDate: data.deliveryDate,
-      status: 'pending' as const,
+      //status: (data.status || 'pending') as const,
       notes: data.notes,
       total
     };
