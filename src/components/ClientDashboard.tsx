@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Client, Item, Order } from '../types';
 import { supabase } from '../lib/supabase';
-import { Plus, Copy, ShoppingCart, Calendar, Package, LogOut, User as UserIcon, Building2, Phone, Mail, Edit2, List, BookOpen, Trash2 } from 'lucide-react';
+import { Plus, Copy, ShoppingCart, Calendar, Package, LogOut, User as UserIcon, Building2, Phone, Mail, Edit2, List, BookOpen, Trash2, Download } from 'lucide-react';
 import ClientOrderForm, { ClientOrderFormData } from './ClientOrderForm';
 import { calculateDiscount } from '../utils/discountCalculator';
+import { generateOrderPDF } from '../utils/pdfGenerator';
 
 interface ClientDashboardProps {
   clientData: Client;
@@ -245,6 +246,15 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
     }
   };
 
+  const handleDownloadPDF = async (order: Order) => {
+    try {
+      await generateOrderPDF(order, clientData, items);
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
   const renderOrderCard = (order: Order, canEdit: boolean) => {
     const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const discountInfo = calculateDiscount(subtotal);
@@ -282,15 +292,35 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
               </div>
             </div>
           </div>
-          {canEdit && (
-            <button
-              onClick={() => handleEditOrder(order)}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            >
-              <Edit2 size={16} />
-              Edit
-            </button>
-          )}
+          <div className="flex gap-2">
+            {canEdit && (
+              <>
+                <button
+                  onClick={() => handleEditOrder(order)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                >
+                  <Edit2 size={16} />
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteOrder(order.id)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                >
+                  <Trash2 size={16} />
+                  Delete
+                </button>
+              </>
+            )}
+            {!canEdit && (
+              <button
+                onClick={() => handleDownloadPDF(order)}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm text-green-600 hover:bg-green-50 rounded-md transition-colors"
+              >
+                <Download size={16} />
+                Download PDF
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="space-y-3 text-sm">
