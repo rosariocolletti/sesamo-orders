@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Client, Item, Order } from '../types';
 import { supabase } from '../lib/supabase';
-import { Plus, Copy, ShoppingCart, Calendar, Package, LogOut, User as UserIcon, Building2, Phone, Mail, Edit2, List, BookOpen } from 'lucide-react';
+import { Plus, Copy, ShoppingCart, Calendar, Package, LogOut, User as UserIcon, Building2, Phone, Mail, Edit2, List, BookOpen, Trash2 } from 'lucide-react';
 import ClientOrderForm, { ClientOrderFormData } from './ClientOrderForm';
 import { calculateDiscount } from '../utils/discountCalculator';
 
@@ -22,6 +22,7 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
   const [initialFormData, setInitialFormData] = useState<ClientOrderFormData | undefined>();
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ClientTab>('orders');
+  const [notification, setNotification] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -139,6 +140,109 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
     setInitialFormData(formData);
     setEditingOrderId(order.id);
     setIsModalOpen(true);
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!window.confirm('Are you sure you want to delete this order?')) {
+      return;
+    }
+
+    try {
+      await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', orderId);
+
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      loadData();
+    } catch (err) {
+      console.error('Error deleting order:', err);
+      alert('Failed to delete order. Please try again.');
+    }
+  };
+
+  const showNotification = (message: string) => {
+    setNotification(message);
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleAddToCart = async (item: Item) => {
+    try {
+      let targetOrder = pendingOrders.find(order => order.status === 'pending');
+
+      if (!targetOrder) {
+        const today = new Date().toISOString().split('T')[0];
+        const newOrderId = crypto.randomUUID();
+
+        const { error: orderError } = await supabase
+          .from('orders')
+          .insert([{
+            id: newOrderId,
+            client_id: clientData.id,
+            delivery_date: today,
+            status: 'pending',
+            total: item.price
+          }]);
+
+        if (orderError) throw orderError;
+
+        const { error: itemError } = await supabase
+          .from('order_items')
+          .insert([{
+            order_id: newOrderId,
+            item_id: item.id,
+            quantity: 1,
+            price: item.price
+          }]);
+
+        if (itemError) throw itemError;
+
+        showNotification(`${item.name} added to new order!`);
+      } else {
+        const existingItem = targetOrder.items.find(oi => oi.itemId === item.id);
+
+        if (existingItem) {
+          const newQuantity = existingItem.quantity + 1;
+          const { error } = await supabase
+            .from('order_items')
+            .update({ quantity: newQuantity })
+            .eq('order_id', targetOrder.id)
+            .eq('item_id', item.id);
+
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('order_items')
+            .insert([{
+              order_id: targetOrder.id,
+              item_id: item.id,
+              quantity: 1,
+              price: item.price
+            }]);
+
+          if (error) throw error;
+        }
+
+        const newTotal = targetOrder.total + item.price;
+        await supabase
+          .from('orders')
+          .update({ total: newTotal })
+          .eq('id', targetOrder.id);
+
+        showNotification(`${item.name} added to order!`);
+      }
+
+      await loadData();
+    } catch (err) {
+      console.error('Error adding item to cart:', err);
+      alert('Failed to add item to cart. Please try again.');
+    }
   };
 
   const renderOrderCard = (order: Order, canEdit: boolean) => {
@@ -352,6 +456,15 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {notification && (
+        <div className="fixed top-4 right-4 z-50 animate-fade-in">
+          <div className="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">
+            <Package size={20} />
+            <span>{notification}</span>
+          </div>
+        </div>
+      )}
+
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -557,6 +670,13 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
                           <p className="text-lg font-bold text-orange-600">{item.price.toFixed(2)} Kč</p>
                           <p className="text-xs text-gray-500">{item.weight}kg</p>
                         </div>
+                        <button
+                          onClick={() => handleAddToCart(item)}
+                          className="flex items-center justify-center w-10 h-10 bg-orange-600 hover:bg-orange-700 text-white rounded-full transition-colors"
+                          title="Add to cart"
+                        >
+                          <ShoppingCart size={20} />
+                        </button>
                       </div>
                     </div>
                   </div>
