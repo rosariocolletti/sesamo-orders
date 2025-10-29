@@ -621,7 +621,7 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
               <Package size={20} className="text-blue-600" />
               Confirmed Orders of the Month
             </h3>
-            {processingOrders.length === 0 ? (
+            {confirmedOrders.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-lg shadow-sm">
                 <Package className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900">No processing orders</h3>
