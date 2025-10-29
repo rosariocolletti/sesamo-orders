@@ -213,7 +213,7 @@ function App() {
 
           {activeTab === 'merge' && (
             <OrderMerger
-              orders={orders.filter(order => order.status === 'pending' || order.status === 'processing')}
+              orders={orders.filter(order => order.status === 'pending' || order.status === 'confirmed')}
               clients={clients}
               items={items}
               onMergeOrders={handleMergeOrders}
