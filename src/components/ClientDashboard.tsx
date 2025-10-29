@@ -51,7 +51,7 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
           )
         `)
         .eq('client_id', clientData.id)
-        .in('status', ['pending', 'processing', 'delivered'])
+        .in('status', ['pending', 'confirmed', 'delivered'])
         .order('created_at', { ascending: false });
 
       if (ordersError) throw ordersError;
