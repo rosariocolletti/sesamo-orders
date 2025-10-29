@@ -82,7 +82,7 @@ export function useSupabaseData() {
           price: oi.price
         })) || [],
         deliveryDate: order.delivery_date,
-        status: order.status as 'pending' | 'processing' | 'shipped' | 'delivered',
+        status: order.status as 'pending' | 'confirmed' | 'shipped' | 'delivered',
         notes: order.notes || '',
         total: order.total,
         createdAt: order.created_at || new Date().toISOString()
