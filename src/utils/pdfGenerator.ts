@@ -112,13 +112,14 @@ export const generateOrderPDF = async (
   doc.setFont('helvetica', 'bold');
   
   doc.text('Celkem bez DPH:', 90, currentY + 15);
+  orderTotal = orderTotalDB * discount * 0.88;
   doc.text(`${orderTotal.toFixed(2)} CZK`, 170, currentY + 15);
   
   orderTotal = orderTotalDB * discount * 0.12;
   doc.text('Celkem DPH:', 90, currentY + 25);
   doc.text(`${orderTotal.toFixed(2)} CZK`, 170, currentY + 25);
   
-  orderTotal = orderTotalDB * discount * 0.12;
+  orderTotal = orderTotalDB * discount;
   doc.text('Celkem s DPH:', 90, currentY + 35);
   doc.text(`${orderTotal.toFixed(2)} CZK`, 170, currentY + 35);
   
