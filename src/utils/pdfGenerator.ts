@@ -66,16 +66,32 @@ export const generateOrderPDF = async (
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   let currentY = tableStartY + 15;
-  
+
+  // calculate  order discount and total 
+  let orderTotalDB = 0;
+  let discount = 1;
+  orderItems.forEach((item) => {
+    const itemTotal = item.price * item.quantity;
+    orderTotalDB += itemTotal;
+  }
+  if (orderTotalDB < 600) {
+    discount = 1;
+  } else if (orderTotalDB < 1200) {
+    discount = 0.9;
+  } else {
+    discount = 0.8;
+  }
+  // Total with discount and without VAT
+  let orderTotal = orderTotalDB * discount * (1 - 0.12);
   orderItems.forEach((item) => {
     const itemTotal = item.price * item.quantity;
     
     doc.text(item.name, 20, currentY);
     doc.text(item.quantity.toString(), 90, currentY);
     
-    let priceDph    = item.price * 0.8 * (1 - 0.12);
-    let totalNoDph  = itemTotal * 0.8 * (1 - 0.12);
-    let totalDph    = itemTotal * 0.8;
+    let priceDph    = item.price * discount * (1 - 0.12);
+    let totalNoDph  = itemTotal * discount * (1 - 0.12);
+    let totalDph    = itemTotal * discount;
     
     doc.text(`${priceDph.toFixed(2)}`, 110, currentY);
     doc.text(`${totalNoDph.toFixed(2)}`, 130, currentY);
@@ -95,15 +111,14 @@ export const generateOrderPDF = async (
   doc.line(20, currentY + 5, 190, currentY + 5);
   doc.setFont('helvetica', 'bold');
   
-  let orderTotal = order.total * 0.8 * (1 - 0.12);
   doc.text('Celkem bez DPH:', 90, currentY + 15);
   doc.text(`${orderTotal.toFixed(2)} CZK`, 170, currentY + 15);
   
-  orderTotal = order.total * 0.8 * 0.12;
+  orderTotal = orderTotalDB * discount * 0.12;
   doc.text('Celkem DPH:', 90, currentY + 25);
   doc.text(`${orderTotal.toFixed(2)} CZK`, 170, currentY + 25);
   
-  orderTotal = order.total * 0.8;
+  orderTotal = orderTotalDB * discount * 0.12;
   doc.text('Celkem s DPH:', 90, currentY + 35);
   doc.text(`${orderTotal.toFixed(2)} CZK`, 170, currentY + 35);
   
