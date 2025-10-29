@@ -10,7 +10,7 @@ interface ClientDashboardProps {
   clientData: Client;
 }
 
-type OrderSection = 'pending' | 'processing' | 'delivered';
+type OrderSection = 'pending' | 'confirmed' | 'delivered';
 type ClientTab = 'orders' | 'catalog';
 
 export default function ClientDashboard({ clientData }: ClientDashboardProps) {
