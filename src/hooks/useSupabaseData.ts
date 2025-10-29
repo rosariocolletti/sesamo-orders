@@ -301,7 +301,7 @@ export function useSupabaseData() {
         clientId: orderResult.client_id,
         items: orderData.items,
         deliveryDate: orderResult.delivery_date,
-        status: orderResult.status as 'pending' | 'processing' | 'shipped' | 'delivered',
+        status: orderResult.status as 'pending' | 'confirmed' | 'shipped' | 'delivered',
         notes: orderResult.notes || '',
         total: orderResult.total,
         createdAt: orderResult.created_at || new Date().toISOString()
