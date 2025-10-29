@@ -196,7 +196,7 @@ export default function OrderManager({ orders, clients, items, onAddOrder, onUpd
           >
             <option value="">All Statuses</option>
             <option value="pending">Pending</option>
-            <option value="processing">Processing</option>
+            <option value="confirmed">Confirmed</option>
             <option value="shipped">Shipped</option>
             <option value="delivered">Delivered</option>
           </select>
