@@ -16,7 +16,7 @@ type ClientTab = 'orders' | 'catalog';
 export default function ClientDashboard({ clientData }: ClientDashboardProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
-  const [processingOrders, setProcessingOrders] = useState<Order[]>([]);
+  const [confirmedOrders, setConfirmedOrders] = useState<Order[]>([]);
   const [deliveredOrders, setDeliveredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
