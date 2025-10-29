@@ -143,7 +143,7 @@ export default function OrderManager({ orders, clients, items, onAddOrder, onUpd
     if (order.status === 'pending') {
       onUpdateOrder(order.id, {
         ...order,
-        status: 'processing'
+        status: 'confirmed'
       });
     }
   };
