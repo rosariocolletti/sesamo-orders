@@ -631,7 +631,7 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {processingOrders.map((order) => renderOrderCard(order, false))}
+                {confirmedOrders.map((order) => renderOrderCard(order, false))}
               </div>
             )}
           </div>
