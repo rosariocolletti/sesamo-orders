@@ -75,11 +75,11 @@ export default function OrderManager({ orders, clients, items, onAddOrder, onUpd
       clientId: data.clientId,
       items: orderItems,
       deliveryDate: data.deliveryDate,
-      status: 'pending' as const,
-      notes: data.nzotes,
+      status: editingOrder ? editingOrder.status : ('pending' as const),
+      notes: data.notes,
       total
     };
-    
+
     if (editingOrder) {
       onUpdateOrder(editingOrder.id, orderData);
     } else {
