@@ -25,7 +25,7 @@ interface OrderFormData {
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
-  confirmed: 'bg-blue-100 text-blue-800',
+  processing: 'bg-blue-100 text-blue-800',
   shipped: 'bg-purple-100 text-purple-800',
   delivered: 'bg-green-100 text-green-800'
 };
@@ -75,8 +75,8 @@ export default function OrderManager({ orders, clients, items, onAddOrder, onUpd
       clientId: data.clientId,
       items: orderItems,
       deliveryDate: data.deliveryDate,
-      status: (data.status || 'pending') as const,
-      notes: data.notes,
+      status: 'pending' as const,
+      notes: data.nzotes,
       total
     };
     
@@ -143,7 +143,7 @@ export default function OrderManager({ orders, clients, items, onAddOrder, onUpd
     if (order.status === 'pending') {
       onUpdateOrder(order.id, {
         ...order,
-        status: 'confirmed'
+        status: 'processing'
       });
     }
   };
@@ -196,7 +196,7 @@ export default function OrderManager({ orders, clients, items, onAddOrder, onUpd
           >
             <option value="">All Statuses</option>
             <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
+            <option value="processing">Processing</option>
             <option value="shipped">Shipped</option>
             <option value="delivered">Delivered</option>
           </select>
