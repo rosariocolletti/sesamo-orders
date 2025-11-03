@@ -248,7 +248,17 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
 
   const handleDownloadPDF = async (order: Order) => {
     try {
-      await generateOrderPDF(order, clientData, items);
+      const orderItems = order.items.map(orderItem => {
+        const item = items.find(i => i.id === orderItem.itemId);
+        return {
+          itemId: orderItem.itemId,
+          quantity: orderItem.quantity,
+          price: orderItem.price,
+          name: item?.name || 'Unknown Item'
+        };
+      });
+
+      await generateOrderPDF(order, clientData, orderItems);
     } catch (err) {
       console.error('Error generating PDF:', err);
       alert('Failed to generate PDF. Please try again.');
