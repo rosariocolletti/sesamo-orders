@@ -403,12 +403,12 @@ export function useSupabaseData() {
 
       const total = combinedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-      // Create merged order with status 'shipped'
+      // Create merged order with status 'merge'
       const mergedOrderData = {
         clientId,
         items: combinedItems,
         deliveryDate: newDeliveryDate,
-        status: 'shipped' as const,
+        status: 'merge' as const,
         notes: `Merged from orders: ${orderIds.map(id => id.slice(-8)).join(', ')}`,
         total
       };
