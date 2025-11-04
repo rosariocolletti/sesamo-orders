@@ -3,6 +3,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { Order, OrderItem, Client, Item } from '../types';
 import { Plus, Edit2, Trash2, ShoppingCart, Calendar, User, Package, Minus, Download, Copy } from 'lucide-react';
 import { generateOrderPDF } from '../utils/pdfGenerator';
+import { calculateDiscount } from '../utils/discountCalculator';
 
 interface OrderManagerProps {
   orders: Order[];
@@ -69,7 +70,9 @@ export default function OrderManager({ orders, clients, items, onAddOrder, onUpd
       };
     });
 
-    const total = calculateTotal(data.items);
+    const subtotal = calculateTotal(data.items);
+    const discountInfo = calculateDiscount(subtotal);
+    const total = discountInfo.finalTotal;
 
     const orderData = {
       clientId: data.clientId,
@@ -207,6 +210,8 @@ export default function OrderManager({ orders, clients, items, onAddOrder, onUpd
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {filteredOrders.map((order) => {
           const client = clients.find(c => c.id === order.clientId);
+          const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+          const discountInfo = calculateDiscount(subtotal);
           return (
             <div key={order.id} className="bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
               <div className="flex justify-between items-start mb-4">
@@ -261,7 +266,7 @@ export default function OrderManager({ orders, clients, items, onAddOrder, onUpd
                   <Calendar size={16} />
                   <span>Delivery: {new Date(order.deliveryDate).toLocaleDateString()}</span>
                 </div>
-                
+
                 <div className="flex items-center gap-2 text-gray-600">
                   <Package size={16} />
                   <span>{order.items.length} item(s)</span>
@@ -282,11 +287,28 @@ export default function OrderManager({ orders, clients, items, onAddOrder, onUpd
                       <div className="text-xs text-gray-500">+ {order.items.length - 3} more items</div>
                     )}
                   </div>
-                  <div className="border-t pt-2 mt-2">
-                    <div className="flex justify-between font-semibold">
-                      <span>Total:</span>
-                      <span>{order.total.toFixed(2)} Kč</span>
-                    </div>
+                  <div className="border-t pt-2 mt-2 space-y-1">
+                    {discountInfo.discount > 0 ? (
+                      <>
+                        <div className="flex justify-between text-xs text-gray-600">
+                          <span>Subtotal:</span>
+                          <span>{discountInfo.subtotal.toFixed(2)} Kč</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-green-600">
+                          <span>Discount ({discountInfo.discountPercentage}%):</span>
+                          <span>-{discountInfo.discount.toFixed(2)} Kč</span>
+                        </div>
+                        <div className="flex justify-between font-semibold text-orange-600">
+                          <span>Total:</span>
+                          <span>{discountInfo.finalTotal.toFixed(2)} Kč</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between font-semibold">
+                        <span>Total:</span>
+                        <span>{order.total.toFixed(2)} Kč</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -406,13 +428,41 @@ export default function OrderManager({ orders, clients, items, onAddOrder, onUpd
                   </div>
                 )}
 
-                {watchedItems && watchedItems.length > 0 && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="text-sm font-medium text-gray-700">
-                      Total: {calculateTotal(watchedItems).toFixed(2)} Kč
+                {watchedItems && watchedItems.length > 0 && (() => {
+                  const subtotal = calculateTotal(watchedItems);
+                  const discountInfo = calculateDiscount(subtotal);
+                  return (
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg space-y-1">
+                      <div className="text-sm text-gray-600 flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>{discountInfo.subtotal.toFixed(2)} Kč</span>
+                      </div>
+                      {discountInfo.discount > 0 && (
+                        <>
+                          <div className="text-sm text-green-600 flex justify-between">
+                            <span>Discount ({discountInfo.discountPercentage}%):</span>
+                            <span>-{discountInfo.discount.toFixed(2)} Kč</span>
+                          </div>
+                          <div className="text-sm font-medium text-orange-600 flex justify-between pt-1 border-t">
+                            <span>Total:</span>
+                            <span>{discountInfo.finalTotal.toFixed(2)} Kč</span>
+                          </div>
+                        </>
+                      )}
+                      {discountInfo.discount === 0 && (
+                        <div className="text-sm font-medium text-gray-700 flex justify-between pt-1 border-t">
+                          <span>Total:</span>
+                          <span>{discountInfo.subtotal.toFixed(2)} Kč</span>
+                        </div>
+                      )}
+                      {discountInfo.message && (
+                        <div className="text-xs text-gray-500 italic pt-1">
+                          {discountInfo.message}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
               <div>
