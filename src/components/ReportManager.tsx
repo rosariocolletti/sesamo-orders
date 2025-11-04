@@ -76,7 +76,7 @@ export default function ReportManager({ orders, clients, items }: ReportManagerP
       const orderDate = new Date(order.deliveryDate);
       const start = new Date(startDate);
       const end = new Date(endDate);
-      return order.status != 'shipped' && orderDate >= start && orderDate <= end;
+      return order.status != 'merge' && orderDate >= start && orderDate <= end;
     });
   }, [orders, startDate, endDate]);
 
