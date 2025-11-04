@@ -31,7 +31,7 @@ export interface Order {
   clientId: string;
   items: OrderItem[];
   deliveryDate: string;
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered';
+  status: 'pending' | 'confirmed' | 'merge' | 'delivered';
   notes: string;
   total: number;
   createdAt: string;
