@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS orders (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   delivery_date date NOT NULL,
-  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered')),
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'merge', 'delivered')),
   notes text,
   total numeric(10, 2) NOT NULL DEFAULT 0 CHECK (total >= 0),
   created_at timestamptz DEFAULT now()
