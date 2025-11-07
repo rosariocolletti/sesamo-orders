@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Client, Item, Order } from '../types';
 import { supabase } from '../lib/supabase';
-import { Plus, Copy, ShoppingCart, Calendar, Package, LogOut, User as UserIcon, Building2, Phone, Mail, Edit2, List, BookOpen, Trash2, Download } from 'lucide-react';
+import { Plus, Copy, ShoppingCart, Calendar, Package, LogOut, User as UserIcon, Building2, Phone, Mail, Edit2, List, BookOpen, Trash2, Download, Grid3x3, LayoutList } from 'lucide-react';
 import ClientOrderForm, { ClientOrderFormData } from './ClientOrderForm';
 import { calculateDiscount } from '../utils/discountCalculator';
 import { generateOrderPDF } from '../utils/pdfGenerator';
@@ -12,6 +12,7 @@ interface ClientDashboardProps {
 
 type OrderSection = 'pending' | 'confirmed' | 'delivered';
 type ClientTab = 'orders' | 'catalog';
+type ViewMode = 'cards' | 'compact';
 
 export default function ClientDashboard({ clientData }: ClientDashboardProps) {
   const [items, setItems] = useState<Item[]>([]);
@@ -24,6 +25,7 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ClientTab>('orders');
   const [notification, setNotification] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
 
   useEffect(() => {
     loadData();
@@ -263,6 +265,73 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
       console.error('Error generating PDF:', err);
       alert('Failed to generate PDF. Please try again.');
     }
+  };
+
+  const renderCompactRow = (order: Order, canEdit: boolean) => {
+    const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const discountInfo = calculateDiscount(subtotal);
+
+    return (
+      <div key={order.id} className="flex items-center justify-between gap-4 px-4 py-3 bg-white border-b hover:bg-gray-50 transition-colors">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-4">
+            <span className="font-mono text-sm font-semibold text-gray-900 whitespace-nowrap">
+              #{order.id.slice(-8)}
+            </span>
+            <span className="text-sm text-gray-600 whitespace-nowrap">
+              {new Date(order.deliveryDate).toLocaleDateString()}
+            </span>
+            <span className="text-sm text-gray-600 whitespace-nowrap">
+              {subtotal.toFixed(2)} Kč
+            </span>
+            {discountInfo.discount > 0 && (
+              <>
+                <span className="text-sm text-green-600 whitespace-nowrap">
+                  -{discountInfo.discount.toFixed(2)} Kč
+                </span>
+                <span className="text-sm font-semibold text-orange-600 whitespace-nowrap">
+                  {discountInfo.finalTotal.toFixed(2)} Kč
+                </span>
+              </>
+            )}
+            {discountInfo.discount === 0 && (
+              <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                {order.total.toFixed(2)} Kč
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-2 flex-shrink-0">
+          {canEdit && (
+            <>
+              <button
+                onClick={() => handleEditOrder(order)}
+                className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                title="Edit"
+              >
+                <Edit2 size={16} />
+              </button>
+              <button
+                onClick={() => handleDeleteOrder(order.id)}
+                className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                title="Delete"
+              >
+                <Trash2 size={16} />
+              </button>
+            </>
+          )}
+          {!canEdit && (
+            <button
+              onClick={() => handleDownloadPDF(order)}
+              className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors"
+              title="Download PDF"
+            >
+              <Download size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const renderOrderCard = (order: Order, canEdit: boolean) => {
@@ -587,21 +656,47 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
         {activeTab === 'orders' && (
           <>
             <div className="mb-8">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={handleCreateOrder}
-                  className="flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
-                >
-                  <Plus size={20} />
-                  Create New Order
-                </button>
-                <button
-                  onClick={handleDuplicateLastOrder}
-                  className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
-                >
-                  <Copy size={20} />
-                  Duplicate Last Order
-                </button>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={handleCreateOrder}
+                    className="flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+                  >
+                    <Plus size={20} />
+                    Create New Order
+                  </button>
+                  <button
+                    onClick={handleDuplicateLastOrder}
+                    className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+                  >
+                    <Copy size={20} />
+                    Duplicate Last Order
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setViewMode('cards')}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                      viewMode === 'cards'
+                        ? 'bg-orange-100 text-orange-600'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                    title="Card view"
+                  >
+                    <Grid3x3 size={18} />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('compact')}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                      viewMode === 'compact'
+                        ? 'bg-orange-100 text-orange-600'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                    title="Compact view"
+                  >
+                    <LayoutList size={18} />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -619,9 +714,13 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
                   Create your first order to get started.
                 </p>
               </div>
-            ) : (
+            ) : viewMode === 'cards' ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {pendingOrders.map((order) => renderOrderCard(order, true))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                {pendingOrders.map((order) => renderCompactRow(order, true))}
               </div>
             )}
           </div>
@@ -639,9 +738,13 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
                   Orders being confirmed will appear here.
                 </p>
               </div>
-            ) : (
+            ) : viewMode === 'cards' ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {confirmedOrders.map((order) => renderOrderCard(order, false))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                {confirmedOrders.map((order) => renderCompactRow(order, false))}
               </div>
             )}
           </div>
@@ -659,9 +762,13 @@ export default function ClientDashboard({ clientData }: ClientDashboardProps) {
                   Completed orders will appear here.
                 </p>
               </div>
-            ) : (
+            ) : viewMode === 'cards' ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {deliveredOrders.map((order) => renderOrderCard(order, false))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                {deliveredOrders.map((order) => renderCompactRow(order, false))}
               </div>
             )}
           </div>
