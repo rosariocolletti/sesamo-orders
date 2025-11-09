@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Joyride from 'react-joyride';
 import { AuthWrapper } from './components/AuthWrapper';
 import { RoleBasedAccess } from './components/RoleBasedAccess';
 import ClientDashboard from './components/ClientDashboard';
@@ -10,7 +11,10 @@ import ItemManager from './components/ItemManager';
 import OrderManager from './components/OrderManager';
 import OrderMerger from './components/OrderMerger';
 import ReportManager from './components/ReportManager';
-import { Users, Package, ShoppingCart, Merge, BarChart3 } from 'lucide-react';
+import { Users, Package, ShoppingCart, Merge, BarChart3, HelpCircle } from 'lucide-react';
+import { useTour } from './context/TourContext';
+import { LanguageSelector } from './components/LanguageSelector';
+import { tourSteps } from './constants/tourSteps';
 
 function App() {
   const {
@@ -30,7 +34,23 @@ function App() {
     deleteOrder,
     mergeOrders
   } = useSupabaseData();
+  const {
+    language,
+    setLanguage,
+    isLanguageSelected,
+    setIsLanguageSelected,
+    showTour,
+    setShowTour
+  } = useTour();
   const [activeTab, setActiveTab] = useState<TabType>('orders');
+
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('tourLanguage');
+    if (savedLanguage) {
+      setLanguage(savedLanguage as 'en' | 'cs');
+      setIsLanguageSelected(true);
+    }
+  }, [setLanguage, setIsLanguageSelected]);
 
   // Enhanced order operations with SMS
   const addOrder = async (orderData: Omit<import('./types').Order, 'id' | 'createdAt'>) => {
@@ -139,43 +159,102 @@ function App() {
     );
   }
 
+  const handleLanguageSelect = (lang: 'en' | 'cs') => {
+    setLanguage(lang);
+    localStorage.setItem('tourLanguage', lang);
+    setIsLanguageSelected(true);
+    setShowTour(true);
+  };
+
   return (
     <AuthWrapper showHeader={false}>
+      {!isLanguageSelected && (
+        <LanguageSelector onSelectLanguage={handleLanguageSelect} />
+      )}
       <RoleBasedAccess
         clientView={(clientData: Client) => (
           <ClientDashboard clientData={clientData} />
         )}
       >
+        <Joyride
+          steps={tourSteps[language]}
+          run={showTour}
+          continuous
+          showProgress
+          showSkipButton
+          styles={{
+            options: {
+              primaryColor: '#2563eb',
+              textColor: '#1f2937',
+              backgroundColor: '#ffffff',
+              arrowColor: '#ffffff',
+              overlayColor: 'rgba(0, 0, 0, 0.5)',
+            },
+            tooltip: {
+              borderRadius: 8,
+              padding: '16px',
+            },
+            buttonNext: {
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              borderRadius: 6,
+              fontSize: 14,
+              padding: '8px 16px',
+            },
+            buttonSkip: {
+              color: '#6b7280',
+              fontSize: 13,
+            },
+          }}
+          callback={(data) => {
+            if (data.action === 'close' || data.action === 'skip' || data.status === 'finished') {
+              setShowTour(false);
+            }
+          }}
+        />
+
         {/* Navigation */}
         <nav className="bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-8">
-            <div className="flex space-x-2">
-              {tabs.map(tab => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-3 py-4 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Icon size={16} />
-                    <span>{tab.label}</span>
-                    {tab.count > 0 && (
-                      <span className={`px-2 py-1 rounded-full text-xs ${
+            <div className="flex justify-between items-center">
+              <div className="flex space-x-2">
+                {tabs.map(tab => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      data-tour={`tab-${tab.id}`}
+                      className={`flex items-center gap-2 px-3 py-4 text-sm font-medium border-b-2 transition-colors ${
                         activeTab === tab.id
-                          ? 'bg-blue-100 text-blue-600'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {tab.count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <Icon size={16} />
+                      <span>{tab.label}</span>
+                      {tab.count > 0 && (
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          activeTab === tab.id
+                            ? 'bg-blue-100 text-blue-600'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                data-tour="help-button"
+                onClick={() => setShowTour(true)}
+                className="flex items-center gap-2 px-3 py-4 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                title="Start tour"
+              >
+                <HelpCircle size={16} />
+              </button>
             </div>
           </div>
         </nav>
