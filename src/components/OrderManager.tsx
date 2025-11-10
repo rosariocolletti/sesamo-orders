@@ -502,7 +502,7 @@ export default function OrderManager({ orders, clients, items, onAddOrder, onUpd
                           <option value="">Select an item</option>
                           {items.map(item => (
                             <option key={item.id} value={item.id}>
-                              {item.name} - ${item.price.toFixed(2)}
+                              {item.name} - Kč{item.price.toFixed(2)}
                             </option>
                           ))}
                         </select>
